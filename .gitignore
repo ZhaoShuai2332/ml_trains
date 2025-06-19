@@ -192,3 +192,5 @@ cython_debug/
 #  refer to https://docs.cursor.com/context/ignore-files
 .cursorignore
 .cursorindexingignore
+data/breast_cancer/X.csv
+data/breast_cancer/y.csv
