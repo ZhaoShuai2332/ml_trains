@@ -32,6 +32,11 @@ def f_logr_pred(linear_pred: np.ndarray, t: float) -> np.ndarray:
         thresh = np.log(t / (1.0 - t))
     return sign_bit(linear_pred - thresh)
 
+def convert_t(t_list : np.ndarray) -> np.ndarray:
+    '''
+    Convert t_list to logit threshold.
+    '''
+    return np.log(t_list / (1.0 - t_list))
 
 
 
