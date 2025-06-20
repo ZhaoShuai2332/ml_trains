@@ -1,32 +1,9 @@
-"""Module: svr_model_trainer
-
-Provides utilities for training, evaluating, and persisting Support Vector Regression models
-on specified UCI benchmark datasets.
-
-Features
---------
-- SVR_Train: fetches data, optionally scales features, trains SVR,
-  computes evaluation metrics, and saves model parameters.
-- SVRModel: loads pre-trained SVR model, applies scaling if used,
-  and offers a predict method for inference on the original dataset.
-
-Dependencies
-------------
-- numpy, pandas
-- custom Min_Max_Scaler for manual scaling
-- scikit-learn for data splits, regression, and metrics
-- fetch_save function to download and save UCI datasets
-- joblib for model serialization
-
-Author: Shuai Zhao
-Date: 2025-06-18
-"""
 import os
 import sys
 # Ensure project root is importable for custom modules
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-import numpy as np 
+import numpy as np
 import pandas as pd
 from model.MinMaxScaler_ import Min_Max_Scaler
 from data.fetch_save_data import fetch_save
@@ -41,7 +18,7 @@ def SVR_Train(
     is_scale: bool = False,
     l: float = 0.0,
     r: float = 1.0,
-    kernel: str = 'rbf',
+    kernel: str = 'linear',  # Set default kernel to 'linear'
     C: float = 1.0,
     gamma: str = 'scale',
     epsilon: float = 0.1
@@ -59,7 +36,7 @@ def SVR_Train(
         Lower bound for MinMax scaling range.
     r : float, default=1.0
         Upper bound for MinMax scaling range.
-    kernel : str, default='rbf'
+    kernel : str, default='linear'  # Changed to 'linear'
         Specifies the kernel type to be used in the algorithm.
     C : float, default=1.0
         Regularization parameter.
@@ -119,17 +96,17 @@ def SVR_Train(
     
     # Save support vectors (training samples that define the decision boundary)
     support_vectors = X[model.support_]
-    np.savez(f"params/support_vectors_{name}{suffix}.npz", support_vectors=support_vectors)
+    np.savez(f"params/support_vectors_{name}{suffix}_svr.npz", support_vectors=support_vectors)
     
     # Save dual coefficients (alpha_i * y_i for support vectors)
     dual_coef = model.dual_coef_.flatten()
-    np.savez(f"params/dual_coef_{name}{suffix}.npz", dual_coef=dual_coef)
+    np.savez(f"params/dual_coef_{name}{suffix}_svr.npz", dual_coef=dual_coef)
     
     # Save intercept (bias term b)
     intercept = model.intercept_
     np.savez(f"params/intercept_{name}{suffix}_svr.npz", intercept=intercept)
     
-    # Save gamma parameter for RBF kernel
+    # Save gamma parameter for RBF kernel (for future use in non-linear kernels)
     if hasattr(model, 'gamma') and model.gamma != 'scale' and model.gamma != 'auto':
         gamma_value = model.gamma
     else:
@@ -138,10 +115,10 @@ def SVR_Train(
             gamma_value = 1.0 / (X.shape[1] * X.var())
         else:  # 'auto'
             gamma_value = 1.0 / X.shape[1]
-    np.savez(f"params/gamma_{name}{suffix}.npz", gamma=gamma_value)
+    np.savez(f"params/gamma_{name}{suffix}_svr.npz", gamma=gamma_value)
     
     # Save kernel type and other parameters
-    np.savez(f"params/kernel_params_{name}{suffix}.npz", 
+    np.savez(f"params/kernel_params_{name}{suffix}_svr.npz",  
              kernel=model.kernel, C=model.C, epsilon=model.epsilon)
 
 
@@ -170,36 +147,39 @@ class SVRModel:
         is_fixpoint: bool, optional
             Whether to use fixed-point arithmetic for predictions.
         """
+        # Store fixpoint flag for use in predict method
+        self.is_fixpoint = is_fixpoint
+        
         # Load raw data
         self.X, self.y = fetch_save(name)
 
         if is_scale:
             print("Scaling the data...")
             # Apply custom Min_Max_Scaler to the data
-            scaler = Min_Max_Scaler(name)
+            scaler = Min_Max_Scaler(name, 'svr')
             self.X = scaler.scaler_x(self.X)
             suffix = "_scale"
         else:
             suffix = ""
             
         # Load SVR model parameters from separate npz files
-        support_vectors_data = np.load(f"params/support_vectors_{name}{suffix}.npz")
+        support_vectors_data = np.load(f"params/support_vectors_{name}{suffix}_svr.npz")
         self.support_vectors = support_vectors_data["support_vectors"]
         
-        dual_coef_data = np.load(f"params/dual_coef_{name}{suffix}.npz")
+        dual_coef_data = np.load(f"params/dual_coef_{name}{suffix}_svr.npz")
         self.dual_coef = dual_coef_data["dual_coef"]
         
         intercept_data = np.load(f"params/intercept_{name}{suffix}_svr.npz")
         self.intercept = intercept_data["intercept"]
         
-        gamma_data = np.load(f"params/gamma_{name}{suffix}.npz")
+        gamma_data = np.load(f"params/gamma_{name}{suffix}_svr.npz")
         self.gamma = gamma_data["gamma"]
         
-        kernel_params_data = np.load(f"params/kernel_params_{name}{suffix}.npz", allow_pickle=True)
+        kernel_params_data = np.load(f"params/kernel_params_{name}{suffix}_svr.npz", allow_pickle=True)
         self.kernel = str(kernel_params_data["kernel"])
         self.C = float(kernel_params_data["C"])
         self.epsilon = float(kernel_params_data["epsilon"])
-            
+             
         if is_fixpoint:
             print("Converting to fixed-point...")
             self.X = parse_float_to_fixed_array(self.X)
@@ -207,9 +187,9 @@ class SVRModel:
             # Note: SVR model parameters cannot be directly converted to fixed-point
             # as they involve complex kernel computations
 
-    def _rbf_kernel(self, X1: np.ndarray, X2: np.ndarray) -> np.ndarray:
+    def _linear_kernel(self, X1: np.ndarray, X2: np.ndarray) -> np.ndarray:
         """
-        Compute RBF (Gaussian) kernel between X1 and X2.
+        Compute Linear kernel between X1 and X2.
         
         Parameters
         ----------
@@ -223,10 +203,8 @@ class SVRModel:
         np.ndarray
             Kernel matrix.
         """
-        # Compute squared Euclidean distances
-        sq_dists = np.sum(X1**2, axis=1).reshape(-1, 1) + np.sum(X2**2, axis=1) - 2 * np.dot(X1, X2.T)
-        # Apply RBF kernel: exp(-gamma * ||x1 - x2||^2)
-        return np.exp(-self.gamma * sq_dists)
+        # Compute linear kernel: K(x1, x2) = x1 * x2^T
+        return np.dot(X1, X2.T)
     
     def predict(self) -> np.ndarray:
         """
@@ -240,10 +218,11 @@ class SVRModel:
         -------
         np.ndarray
             Predicted target values, flattened to one-dimensional array.
+            If is_fixpoint=True, returns array of FixedPoint objects.
         """
         if hasattr(self, 'X') and self.X is not None:
             # Convert fixed-point back to float for SVR prediction if needed
-            if isinstance(self.X[0, 0], object):  # Check if it's fixed-point
+            if self.is_fixpoint:
                 from scripts.Fixpoint import parse_fixed_to_float_array
                 X_float = parse_fixed_to_float_array(self.X)
             else:
@@ -254,15 +233,9 @@ class SVRModel:
             
             for x_query in X_float:
                 # Compute kernel values between query point and all support vectors
-                if self.kernel == 'rbf':
-                    kernel_values = self._rbf_kernel(x_query.reshape(1, -1), self.support_vectors)
+                if self.kernel == 'linear':
+                    kernel_values = self._linear_kernel(x_query.reshape(1, -1), self.support_vectors)
                     kernel_values = kernel_values.flatten()
-                elif self.kernel == 'linear':
-                    kernel_values = np.dot(self.support_vectors, x_query)
-                elif self.kernel == 'poly':
-                    # For polynomial kernel, we would need degree parameter
-                    # Simplified as linear for now
-                    kernel_values = np.dot(self.support_vectors, x_query)
                 else:
                     raise ValueError(f"Unsupported kernel type: {self.kernel}")
                 
@@ -270,8 +243,13 @@ class SVRModel:
                 prediction = np.sum(self.dual_coef * kernel_values) + self.intercept
                 predictions.append(prediction)
             
+            predictions_array = np.array(predictions).flatten()
+            
+            # Convert to FixedPoint if this is a fixpoint model
+            if self.is_fixpoint:
+                predictions_array = parse_float_to_fixed_array(predictions_array)
+            
             print("Done!")
-            return np.array(predictions).flatten()
+            return predictions_array
         else:
             raise ValueError("No data available for prediction")
-   

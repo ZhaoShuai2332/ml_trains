@@ -100,5 +100,5 @@ def parse_fixed_to_float_array(fixed_array: np.ndarray) -> np.ndarray:
     """
     shape = fixed_array.shape
     flat = fixed_array.flatten()
-    float_list = [v.to_float() for v in flat]
+    float_list = [v.to_float() if hasattr(v, "to_float") else float(v) for v in flat]
     return np.array(float_list, dtype=np.float32).reshape(shape)

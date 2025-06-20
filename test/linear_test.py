@@ -5,8 +5,8 @@ sys.path.append(parent_dir)
 from model.LinearModel import LinearModel
 from scripts.run_proms import parse_args
 import numpy as np
-from scripts.calu import f_logr_pred, logistic_pred, convert_t, f_logr_fix
-from scripts.Fixpoint import parse_fixed_to_float_array, parse_float_to_fixed_array
+from scripts.calu import f_logr_pred, convert_t, f_logr_fix
+from scripts.Fixpoint import parse_float_to_fixed_array
 
 
 def LinearTest():
@@ -34,6 +34,7 @@ def LinearTest():
     preds_fix = linear_fix.predict()
     logr_list_fix = np.array([f_logr_fix(preds_fix, t) for t in logr_t_list])
 
+    # Print result
     print(np.array([np.sum(logr_list_fix[i] == logr_list[i]) for i in range(0, 99)]))
 
 if __name__ == "__main__":

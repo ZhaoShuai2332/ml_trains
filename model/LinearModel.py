@@ -73,7 +73,7 @@ def Linear_Train(
         X = scaler.fit_transform(X)
         # Persist scaling parameters for consistent future transformations
         np.savez(
-            f"params/min_max_scaler_{name}.npz",
+            f"params/min_max_scaler_{name}_linear.npz",
             min=scaler.min_,
             scale=scaler.scale_,
             data_min=scaler.data_min_,
@@ -103,8 +103,8 @@ def Linear_Train(
 
     # Persist model parameters, with separate files for scaled vs. unscaled
     suffix = "_scale" if is_scale else ""
-    np.savez(f"params/intercept_{name}{suffix}.npz", intercept=model.intercept_)
-    np.savez(f"params/coef_{name}{suffix}.npz", coef=model.coef_)
+    np.savez(f"params/intercept_{name}{suffix}_linear.npz", intercept=model.intercept_)
+    np.savez(f"params/coef_{name}{suffix}_linear.npz", coef=model.coef_)
 
 
 class LinearModel:
@@ -138,17 +138,17 @@ class LinearModel:
         if is_scale:
             print("Scaling the data...")
             # Apply custom Min_Max_Scaler to the data
-            scaler = Min_Max_Scaler(name)
+            scaler = Min_Max_Scaler(name, "linear")
             self.X = scaler.scaler_x(self.X)
             # Load scaled model parameters
-            params = np.load(f"params/coef_{name}_scale.npz")
+            params = np.load(f"params/coef_{name}_scale_linear.npz")
             self.coef_ = params["coef"].flatten()
-            self.intercept_ = np.load(f"params/intercept_{name}_scale.npz")["intercept"]
+            self.intercept_ = np.load(f"params/intercept_{name}_scale_linear.npz")["intercept"]
         else:
             # Load unscaled model parameters
-            params = np.load(f"params/coef_{name}.npz")
+            params = np.load(f"params/coef_{name}_linear.npz")
             self.coef_ = params["coef"].flatten()
-            self.intercept_ = np.load(f"params/intercept_{name}.npz")["intercept"]
+            self.intercept_ = np.load(f"params/intercept_{name}_linear.npz")["intercept"]
         if is_fixpoint:
             print("Converting to fixed-point...")
             self.X = parse_float_to_fixed_array(self.X)

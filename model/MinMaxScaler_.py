@@ -6,8 +6,8 @@ import numpy as np
 
 
 class Min_Max_Scaler:
-    def __init__(self, name):
-        self.param_path = os.path.join(parent_dir, "params", f"min_max_scaler_{name}.npz")
+    def __init__(self, name, model_type):
+        self.param_path = os.path.join(parent_dir, "params", f"min_max_scaler_{name}_{model_type}.npz")
         params_np = np.load(self.param_path)
         self.params = {
             "min": params_np["min"],
