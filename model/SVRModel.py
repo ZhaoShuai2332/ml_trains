@@ -1,17 +1,40 @@
+""" 
+Module: svr_model_trainer
+
+Provides utilities for training, evaluating, and persisting Support Vector Regression models
+on specified UCI benchmark datasets.
+
+Features
+--------
+- SVR_Train: fetches data, optionally scales features, trains SVR model,
+  computes evaluation metrics, and saves model parameters separately.
+- SVRModel: loads pre-trained SVR parameters (support vectors, dual coefficients, etc.),
+  applies scaling if used, and offers a predict method for inference on the original dataset.
+
+Dependencies
+------------
+- numpy, pandas
+- custom Min_Max_Scaler for manual scaling
+- scikit-learn for data splits, SVR, and metrics
+- fetch_save function to download and save UCI datasets
+- Fixpoint module for fixed-point arithmetic support
+
+Author: Shuai Zhao
+Date: 2025-06-18
+"""
 import os
 import sys
 # Ensure project root is importable for custom modules
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-import numpy as np
-import pandas as pd
-from model.MinMaxScaler_ import Min_Max_Scaler
-from data.fetch_save_data import fetch_save
-from sklearn.svm import SVR
-from sklearn.preprocessing import MinMaxScaler
-from sklearn.metrics import r2_score, mean_squared_error, mean_absolute_error
+import numpy as np 
+import pandas as pd  
+from model.MinMaxScaler_ import Min_Max_Scaler  
+from data.fetch_save_data import fetch_save  
+from sklearn.svm import SVR  
+from sklearn.preprocessing import MinMaxScaler 
+from sklearn.metrics import r2_score, mean_squared_error, mean_absolute_error  
 from scripts.Fixpoint import parse_float_to_fixed_array
-import joblib
 
 def SVR_Train(
     name: str,
@@ -36,24 +59,25 @@ def SVR_Train(
         Lower bound for MinMax scaling range.
     r : float, default=1.0
         Upper bound for MinMax scaling range.
-    kernel : str, default='linear'  # Changed to 'linear'
+    kernel : str, default='linear'
         Specifies the kernel type to be used in the algorithm.
     C : float, default=1.0
-        Regularization parameter.
+        Regularization parameter for SVR.
     gamma : str or float, default='scale'
         Kernel coefficient for 'rbf', 'poly' and 'sigmoid'.
     epsilon : float, default=0.1
-        Epsilon in the epsilon-SVR model.
+        Epsilon parameter in the epsilon-SVR model.
 
     Side Effects
     ------------
     - Fetches features X and targets y via fetch_save(name).
     - Optionally scales X and saves scaler parameters to params/ folder.
     - Fits SVR model and computes R², MSE, MAE metrics.
-    - Persists trained model in .pkl file under params/.
+    - Persists SVR model parameters separately in .npz files under params/:
+      support vectors, dual coefficients, intercept, gamma, and kernel parameters.
     """
-    # Instantiate the SVR model
-    model = SVR(kernel=kernel, C=C, gamma=gamma, epsilon=epsilon)
+    # Instantiate the Support Vector Regression model
+    model = SVR(kernel=kernel, C=C, gamma=gamma, epsilon=epsilon, max_iter=10000)
     # Load data
     X, y = fetch_save(name)
 
@@ -82,38 +106,30 @@ def SVR_Train(
     mse = mean_squared_error(y, y_pred)
     mae = mean_absolute_error(y, y_pred)
 
-    # Display results
     print(f"\nSVR Model Evaluation Metrics on {name} dataset:")
     print(f"R² Score: {r2:.4f}")
     print(f"Mean Squared Error: {mse:.4f}")
     print(f"Mean Absolute Error: {mae:.4f}\n")
 
-    # Ensure parameter directory exists
     os.makedirs("params", exist_ok=True)
 
-    # Extract and persist SVR model parameters separately
     suffix = "_scale" if is_scale else ""
     
-    # Save support vectors (training samples that define the decision boundary)
     support_vectors = X[model.support_]
     np.savez(f"params/support_vectors_{name}{suffix}_svr.npz", support_vectors=support_vectors)
     
-    # Save dual coefficients (alpha_i * y_i for support vectors)
     dual_coef = model.dual_coef_.flatten()
     np.savez(f"params/dual_coef_{name}{suffix}_svr.npz", dual_coef=dual_coef)
     
-    # Save intercept (bias term b)
     intercept = model.intercept_
     np.savez(f"params/intercept_{name}{suffix}_svr.npz", intercept=intercept)
     
-    # Save gamma parameter for RBF kernel (for future use in non-linear kernels)
     if hasattr(model, 'gamma') and model.gamma != 'scale' and model.gamma != 'auto':
         gamma_value = model.gamma
     else:
-        # Calculate gamma value for 'scale' or 'auto'
         if model.gamma == 'scale':
             gamma_value = 1.0 / (X.shape[1] * X.var())
-        else:  # 'auto'
+        else:
             gamma_value = 1.0 / X.shape[1]
     np.savez(f"params/gamma_{name}{suffix}_svr.npz", gamma=gamma_value)
     

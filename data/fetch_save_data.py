@@ -1,5 +1,4 @@
-"""
-Module: fetch_save_data
+"""Module: fetch_save_data
 
 Provides utilities to download benchmark datasets from the UCI Machine Learning Repository,
 preprocess them with label encoding, and save them locally as CSV files.
@@ -96,7 +95,12 @@ def save_data(X: pd.DataFrame, y: pd.DataFrame, name: str):
     
     # Encode categorical features using label encoding
     label_encoders = {}
+    print("Columns:", X_processed.columns)
     for column in X_processed.columns:
+        if list(X_processed.columns).count(column) > 1:
+            print(f"Warning: Duplicate column name '{column}' detected, skipping encoding for this column.")
+            continue
+        print("Processing column:", column, "dtype:", X_processed[column].dtype)
         if X_processed[column].dtype == 'object':
             le = LabelEncoder()
             X_processed[column] = le.fit_transform(X_processed[column].astype(str))

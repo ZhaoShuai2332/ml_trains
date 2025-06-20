@@ -194,3 +194,9 @@ cython_debug/
 .cursorindexingignore
 data/breast_cancer/X.csv
 data/breast_cancer/y.csv
+data/spambase/X.csv
+data/spambase/y.csv
+data/parkinsons/y.csv
+data/parkinsons/X.csv
+data/connectionist_bench/X.csv
+data/connectionist_bench/y.csv
