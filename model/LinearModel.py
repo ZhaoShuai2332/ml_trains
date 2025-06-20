@@ -33,7 +33,7 @@ from data.fetch_save_data import fetch_save  # Dataset fetching and saving utili
 from sklearn.linear_model import LinearRegression  # Core regression model
 from sklearn.preprocessing import MinMaxScaler  # Optional scaling from scikit-learn
 from sklearn.metrics import r2_score, mean_squared_error, mean_absolute_error  # Evaluation metrics
-
+from scripts.Fixpoint import parse_float_to_fixed_array
 
 def Linear_Train(
     name: str,
@@ -81,9 +81,11 @@ def Linear_Train(
         )
 
     # Train the model on full dataset
+    print("Training the model...")
     model.fit(X, y)
     # Generate predictions for evaluation
     y_pred = model.predict(X).flatten()
+    print("Done!")
 
     # Compute evaluation metrics
     r2 = r2_score(y, y_pred)
@@ -115,7 +117,8 @@ class LinearModel:
     def __init__(
         self,
         name: str,
-        is_scale: bool = False
+        is_scale: bool = False,
+        is_fixpoint: bool = False
     ):
         """
         Initialize the LinearModel with dataset features, targets, and parameters.
@@ -126,11 +129,14 @@ class LinearModel:
             Identifier used to fetch data and locate saved parameters.
         is_scale : bool, optional
             Whether the model was trained on scaled inputs.
+        is_fixpoint: bool, optional
+            Whether to use fixed-point arithmetic for predictions.
         """
         # Load raw data
         self.X, self.y = fetch_save(name)
 
         if is_scale:
+            print("Scaling the data...")
             # Apply custom Min_Max_Scaler to the data
             scaler = Min_Max_Scaler(name)
             self.X = scaler.scaler_x(self.X)
@@ -143,6 +149,12 @@ class LinearModel:
             params = np.load(f"params/coef_{name}.npz")
             self.coef_ = params["coef"].flatten()
             self.intercept_ = np.load(f"params/intercept_{name}.npz")["intercept"]
+        if is_fixpoint:
+            print("Converting to fixed-point...")
+            self.X = parse_float_to_fixed_array(self.X)
+            self.y = parse_float_to_fixed_array(self.y)
+            self.coef_ = parse_float_to_fixed_array(self.coef_)
+            self.intercept_ = parse_float_to_fixed_array(self.intercept_)
 
     def predict(self) -> np.ndarray:
         """
@@ -154,8 +166,11 @@ class LinearModel:
             Predicted target values, flattened to one-dimensional array.
         """
         # Compute linear combination: X @ coef + intercept
-        res = []
+        bias_fp = self.intercept_.item() if isinstance(self.intercept_, np.ndarray) else self.intercept_
+        res_list = []
         for x in self.X:
-            res.append(np.dot(x, self.coef_) + self.intercept_)
-        return np.array(res).flatten()
+            res = np.dot(x, self.coef_) + bias_fp
+            res_list.append(res)
+        print("Done!")
+        return np.array(res_list).flatten()
 

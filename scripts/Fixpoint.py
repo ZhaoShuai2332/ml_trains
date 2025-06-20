@@ -2,13 +2,13 @@ import numpy as np
 
 class FixedPoint:
     """
-    Fixed-point Q20.12 representation using 32-bit two's complement.
+    Fixed-point Q20.16 representation using 32-bit two's complement.
 
     - int_bits: total bits for integer part including sign (20)
-    - frac_bits: bits for fractional part (12)
+    - frac_bits: bits for fractional part (16)
     - total_bits: sum of int_bits and frac_bits (32)
     """
-    def __init__(self, value, int_bits=20, frac_bits=12, from_float=False):
+    def __init__(self, value, int_bits=20, frac_bits=16, from_float=False):
         self.int_bits = int_bits
         self.frac_bits = frac_bits
         self.total_bits = int_bits + frac_bits
@@ -18,7 +18,7 @@ class FixedPoint:
         if from_float or isinstance(value, (float, np.floating)):
             # Convert float to signed integer representation
             scaled = int(round(value * (1 << self.frac_bits)))
-            # Saturate to Q20.12 limits
+            # Saturate to Q20.16 limits
             min_val = -(1 << (self.total_bits - 1))
             max_val =  (1 << (self.total_bits - 1)) - 1
             if scaled < min_val:
@@ -69,7 +69,7 @@ class FixedPoint:
         # Multiply signed values, then scale down by frac_bits
         prod = self._signed() * other._signed()
         scaled = prod >> self.frac_bits
-        # Saturate to Q20.12 limits
+        # Saturate to Q20.16 limits
         min_val = -(1 << (self.total_bits - 1))
         max_val =  (1 << (self.total_bits - 1)) - 1
         if scaled < min_val:
@@ -85,33 +85,20 @@ class FixedPoint:
 
 def parse_float_to_fixed_array(float_array: np.ndarray, 
                                int_bits: int = 20, 
-                               frac_bits: int = 12) -> np.ndarray:
+                               frac_bits: int = 16) -> np.ndarray:
     """
     Convert a float array to a fixed-point array.
     """
-    if np.isscalar(float_array):
-        return np.array([FixedPoint(float_array, int_bits, frac_bits, from_float=True)])
-    float_array = float_array.astype(np.float32)
-    return np.array([FixedPoint(x, int_bits, frac_bits, from_float=True) for x in float_array])
+    shape = float_array.shape
+    flat = float_array.flatten()
+    fixed_list = [FixedPoint(v, int_bits, frac_bits, from_float=True) for v in flat]
+    return np.array(fixed_list, dtype=object).reshape(shape)
 
 def parse_fixed_to_float_array(fixed_array: np.ndarray) -> np.ndarray:
     """
     Convert a fixed-point array to a float array.
     """
-    return np.array([x.to_float() for x in fixed_array])
-
-# if __name__ == "__main__":
-#     np.random.seed(42)
-#     a = np.round(np.random.rand(100), 5)
-#     a_fixed = parse_float_to_fixed_array(a)
-#     a_float = parse_fixed_to_float_array(a_fixed)
-#     print(np.abs(a - a_float))
-#     b = np.round(np.random.rand(100), 5)
-#     b_fixed = parse_float_to_fixed_array(b)
-#     b_float = parse_fixed_to_float_array(b_fixed)
-#     print(np.abs(b - b_float))
-#     dot_product = np.dot(a, b)
-#     dot_product_fixed = parse_float_to_fixed_array(dot_product)
-#     dot_product_float = parse_fixed_to_float_array(dot_product_fixed)
-#     print(np.abs(dot_product - dot_product_float))
-
+    shape = fixed_array.shape
+    flat = fixed_array.flatten()
+    float_list = [v.to_float() for v in flat]
+    return np.array(float_list, dtype=np.float32).reshape(shape)

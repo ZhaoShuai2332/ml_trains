@@ -55,8 +55,6 @@ def fetch_data(id: int) -> tuple[pd.DataFrame, pd.DataFrame]:
     # Extract feature matrix and target vector
     X = res_data.data.features
     y = res_data.data.targets
-    # print(X.shape)
-    # print(y.shape)
     
     return X, y
 
