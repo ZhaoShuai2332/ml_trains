@@ -2,13 +2,13 @@ import numpy as np
 
 class FixedPoint:
     """
-    Fixed-point Q20.16 representation using 32-bit two's complement.
+    Fixed-point Q20.12 representation using 32-bit two's complement.
 
     - int_bits: total bits for integer part including sign (20)
-    - frac_bits: bits for fractional part (16)
+    - frac_bits: bits for fractional part (12)
     - total_bits: sum of int_bits and frac_bits (32)
     """
-    def __init__(self, value, int_bits=20, frac_bits=16, from_float=False):
+    def __init__(self, value, int_bits=20, frac_bits=12, from_float=False):
         self.int_bits = int_bits
         self.frac_bits = frac_bits
         self.total_bits = int_bits + frac_bits
@@ -18,7 +18,7 @@ class FixedPoint:
         if from_float or isinstance(value, (float, np.floating)):
             # Convert float to signed integer representation
             scaled = int(round(value * (1 << self.frac_bits)))
-            # Saturate to Q20.16 limits
+            # Saturate to Q20.12 limits
             min_val = -(1 << (self.total_bits - 1))
             max_val =  (1 << (self.total_bits - 1)) - 1
             if scaled < min_val:
@@ -69,7 +69,7 @@ class FixedPoint:
         # Multiply signed values, then scale down by frac_bits
         prod = self._signed() * other._signed()
         scaled = prod >> self.frac_bits
-        # Saturate to Q20.16 limits
+        # Saturate to Q20.12 limits
         min_val = -(1 << (self.total_bits - 1))
         max_val =  (1 << (self.total_bits - 1)) - 1
         if scaled < min_val:
@@ -85,7 +85,7 @@ class FixedPoint:
 
 def parse_float_to_fixed_array(float_array: np.ndarray, 
                                int_bits: int = 20, 
-                               frac_bits: int = 16) -> np.ndarray:
+                               frac_bits: int = 12) -> np.ndarray:
     """
     Convert a float array to a fixed-point array.
     """
