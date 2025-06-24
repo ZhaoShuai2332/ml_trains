@@ -1,43 +1,55 @@
-import os, sys
-parent_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-sys.path.append(parent_dir)
+import os
+import sys
+
+# Setup base directory and ensure imports work
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+sys.path.append(BASE_DIR)
 
 from data.fetch_save_data import fetch_save
 from model.MinMaxScaler_ import Min_Max_Scaler
 
-dataset_list = ["breast_cancer", "parkinsons", "connectionist_bench", "spambase"]
+# Configuration
+DATASETS = [
+    "breast_cancer",
+    "parkinsons",
+    "connectionist_bench",
+    "spambase"
+]
+MODELS = ["linear", "svr"]
 
-def save_data_binary():
-    for name in dataset_list:
-        print(f"Starting to convert: {name}...")
-        X, y = fetch_save(name)
-        path = os.path.join(parent_dir, "binary_data", "data", name)
-        if not os.path.exists(path):
-            os.makedirs(path)
-        with open(os.path.join(path, "0-queries.in"), 'wb') as f:
-            f.write(X.tobytes())
-        with open(os.path.join(path, "0-relevance.in"), 'wb') as f:
-            f.write(y.tobytes())
+# Directory for writing binary data
+DATA_BIN_DIR = os.path.join(BASE_DIR, "binary_data", "data")
 
-def save_data_binary_scale():
-    model_list = ["svr", "linear"]
-    for model_name in model_list:
-        for name in dataset_list:
-            print(f"Starting to convert: {name} in {model_name} with scale...")
-            scaler = Min_Max_Scaler(name, model_name)
-            X,y = fetch_save(name)
-            X = scaler.scaler_x(X)
-            path = os.path.join(parent_dir, "binary_data", "data", f"{name}_{model_name}_scale")
-            if not os.path.exists(path):
-                os.makedirs(path)
-            with open(os.path.join(path, "0-queries.in"), 'wb') as f:
-                f.write(X.tobytes())
-            with open(os.path.join(path, "0-relevance.in"), 'wb') as f:
-                f.write(y.tobytes())
+
+def _save_binary(X, y, out_dir):
+    """Write feature and target arrays to binary files in the specified directory."""
+    os.makedirs(out_dir, exist_ok=True)
+    for fname, arr in (("0-queries.in", X), ("0-relevance.in", y)):
+        path = os.path.join(out_dir, fname)
+        with open(path, 'wb') as f:
+            f.write(arr.tobytes())
+
+
+def process_raw():
+    """Fetch each dataset and save raw feature/target arrays."""
+    for ds in DATASETS:
+        print(f"Converting raw data for: {ds}...")
+        X, y = fetch_save(ds)
+        out_dir = os.path.join(DATA_BIN_DIR, ds)
+        _save_binary(X, y, out_dir)
+
+
+def process_scaled():
+    """Fetch, scale, and save arrays for each dataset-model combination."""
+    for model in MODELS:
+        for ds in DATASETS:
+            print(f"Converting scaled data for: {ds} ({model})...")
+            X, y = fetch_save(ds)
+            X_scaled = Min_Max_Scaler(ds, model).scaler_x(X)
+            out_dir = os.path.join(DATA_BIN_DIR, f"{ds}_{model}_scale")
+            _save_binary(X_scaled, y, out_dir)
+
 
 if __name__ == "__main__":
-    save_data_binary()
-    save_data_binary_scale()
-            
-
-        
+    process_raw()
+    process_scaled()
