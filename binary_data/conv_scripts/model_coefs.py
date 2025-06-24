@@ -17,7 +17,7 @@ SCALES = ['', '_scale']
 
 def _write_binary(output_dir, name, arr):
     """Write NumPy array to binary file with given name."""
-    path = os.path.join(output_dir, f"0_{name}")
+    path = os.path.join(output_dir, f"0_{name}.in")
     with open(path, 'wb') as f:
         f.write(arr.tobytes())
 

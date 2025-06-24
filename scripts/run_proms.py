@@ -110,7 +110,6 @@ def parse_args() -> argparse.Namespace:
         help="Upper bound for MinMax scaling (default: 1.0).",
     )
 
-    # Hyperparameter tuning
     parser.add_argument(
         "--gridsearch",
         action="store_true",
