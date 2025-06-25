@@ -30,9 +30,12 @@ def SVRTest():
     logr_t_list = parse_float_to_fixed_array(logr_t_list)
     svr_fix = SVRModel(name, is_scale, is_fixpoint=True)
     preds_fix = svr_fix.predict()
+    print(preds_fix)
     logr_list_fix = np.array([f_logr_fix(preds_fix, t) for t in logr_t_list])
-    
+    fix_float = parse_fixed_to_float_array(preds_fix)
+
     # Print result
+    print(np.max(np.abs(fix_float - preds)))
     print(np.array([np.sum(logr_list_fix[i] == logr_list[i]) for i in range(0, 99)]))
 
 if __name__ == "__main__":

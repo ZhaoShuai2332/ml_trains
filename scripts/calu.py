@@ -15,12 +15,21 @@ def sign_bit(x: np.ndarray) -> np.ndarray:
     return ((arr_uint >> (bits - 1)) & 1).astype(int)
 
 def sign_bit_fix(x: FixedPoint) -> int:
-    '''Extract MSB sign bit: 0 if x >= 0, 1 if x < 0.'''
+    '''Extract sign bit using bit operations with modular arithmetic handling: 0 if x >= 0, 1 if x < 0.'''
     if not isinstance(x, FixedPoint):
         raise TypeError("The input must be a FixedPoint object")
-    sign_mask = x.sign_bit
     
-    return 1 if (x.raw & sign_mask) else 0
+    # Use bit operations to determine sign based on FixedPoint's modular arithmetic
+    # Check if the value represents a negative number in the modular system
+    if x.raw >= x.P // 2:
+        # Large values close to P should be treated as negative
+        return 1
+    elif x.raw >= x.sign_bit:
+        # Standard two's complement negative (MSB set)
+        return 1
+    else:
+        # Positive value
+        return 0
     
 
 def logistic_pred(linear_pred: np.ndarray, t: float) -> tuple[np.ndarray, np.ndarray]:
