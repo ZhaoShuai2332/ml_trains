@@ -7,6 +7,7 @@ sys.path.append(BASE_DIR)
 
 from data.fetch_save_data import fetch_save
 from model.MinMaxScaler_ import Min_Max_Scaler
+from fix_convert import array_to_fix
 
 # Configuration
 DATASETS = [
@@ -24,6 +25,10 @@ DATA_BIN_DIR = os.path.join(BASE_DIR, "binary_data", "data")
 def _save_binary(X, y, out_dir):
     """Write feature and target arrays to binary files in the specified directory."""
     os.makedirs(out_dir, exist_ok=True)
+    X = array_to_fix(X)
+    y = array_to_fix(y)
+    print(X.shape)
+    print(y.shape)
     for fname, arr in (("0-queries.in", X), ("0-relevance.in", y)):
         path = os.path.join(out_dir, fname)
         with open(path, 'wb') as f:

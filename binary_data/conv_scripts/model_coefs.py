@@ -1,5 +1,6 @@
 import os
 import numpy as np
+from fix_convert import array_to_fix
 
 # Paths
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
@@ -17,6 +18,13 @@ SCALES = ['', '_scale']
 
 def _write_binary(output_dir, name, arr):
     """Write NumPy array to binary file with given name."""
+    # Check if the array contains numeric data
+    if not np.issubdtype(arr.dtype, np.number):
+        print(f"Skipping non-numeric data: {name} (dtype: {arr.dtype})")
+        return
+    
+    arr = array_to_fix(arr)
+    print(arr.shape)
     path = os.path.join(output_dir, f"0_{name}.in")
     with open(path, 'wb') as f:
         f.write(arr.tobytes())
@@ -45,13 +53,15 @@ def process_dataset(dataset):
                     key = param if param in data else list(data.keys())[0]
                     _write_binary(out_dir, f"{param}_{dataset}{suffix}", data[key])
 
-        # Handle kernel_params for SVR
+        # Handle kernel_params for SVR - only process numeric fields
         if model == 'svr':
             for suffix in SCALES:
                 kp_file = os.path.join(PARAM_DIR, f"kernel_params_{dataset}{suffix}_svr.npz")
                 kp_data = np.load(kp_file)
-                for comp in ('kernel', 'C', 'epsilon'):
-                    _write_binary(out_dir, f"{comp}_{dataset}{suffix}", kp_data[comp])
+                # Only process numeric components, skip 'kernel' which contains string
+                for comp in ('C', 'epsilon'):  # Removed 'kernel' from the list
+                    if comp in kp_data:
+                        _write_binary(out_dir, f"{comp}_{dataset}{suffix}", kp_data[comp])
 
 
 if __name__ == '__main__':
