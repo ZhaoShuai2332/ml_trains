@@ -6,7 +6,7 @@ from model.LinearModel import LinearModel
 from scripts.run_proms import parse_args
 import numpy as np
 from scripts.calu import f_logr_pred, convert_t, f_logr_fix
-from scripts.Fixpoint import parse_float_to_fixed_array, parse_fixed_to_float_array, judge_fixArray_flowed
+from scripts.Fixpoint import parse_float_to_fixed_array, parse_fixed_to_float_array
 
 
 def LinearTest():
@@ -36,9 +36,8 @@ def LinearTest():
     fix_float = parse_fixed_to_float_array(preds_fix)
 
     # Print result
-    print(judge_fixArray_flowed(preds_fix))
-    # print(np.abs(fix_float - preds))
-    # print(np.array([np.sum(logr_list_fix[i] == logr_list[i]) for i in range(0, 99)]) - 569)
+    print(np.max(np.abs(fix_float - preds)))
+    print(np.array([np.sum(logr_list_fix[i] == logr_list[i]) for i in range(0, 99)]))
 
 if __name__ == "__main__":
     LinearTest()

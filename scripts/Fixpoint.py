@@ -2,16 +2,16 @@ import numpy as np
 
 class FixedPoint:
     """
-    Fixed-point Q20.12 representation with proper modular arithmetic handling.
+    Fixed-point Q18.14 representation with proper modular arithmetic handling.
 
-    - int_bits: total bits for integer part including sign (20)
-    - frac_bits: bits for fractional part (12)
+    - int_bits: total bits for integer part including sign (18)
+    - frac_bits: bits for fractional part (14)
     - total_bits: sum of int_bits and frac_bits (32)
     - P: modulus for all operations (2^31 - 1)
     """
     P = 2**31 - 1  # 2147483647
 
-    def __init__(self, value, int_bits=20, frac_bits=12, from_float=False):
+    def __init__(self, value, int_bits=18, frac_bits=14, from_float=False):
         self.int_bits = int_bits
         self.frac_bits = frac_bits
         self.total_bits = int_bits + frac_bits
@@ -21,7 +21,7 @@ class FixedPoint:
         self.min_negative = -(1 << (self.total_bits - 1))
 
         if from_float or isinstance(value, (float, np.floating)):
-            # Convert float to Q20.12 raw integer
+            # Convert float to Q18.14 raw integer
             scaled = int(round(value * (1 << self.frac_bits)))
             # Clamp to valid range before modular reduction
             scaled = max(self.min_negative, min(self.max_positive, scaled))
@@ -125,8 +125,8 @@ class FixedPoint:
 # Helper functions
 
 def parse_float_to_fixed_array(float_array: np.ndarray,
-                               int_bits: int = 20,
-                               frac_bits: int = 12) -> np.ndarray:
+                               int_bits: int = 18,
+                               frac_bits: int = 14) -> np.ndarray:
     """
     Convert a float array to a fixed-point array using modular arithmetic under P.
     """
